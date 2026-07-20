@@ -127,7 +127,13 @@ func buildDiskStartupScript(req Request) (*os.File, error) {
 	if _, err = io.Copy(concreteStartupScript, startupScriptTemplate); err != nil {
 		return nil, fmt.Errorf("unable to create the concrete startup file suceesfully, err: %v", err)
 	}
-	images := strings.Join(req.ContainerImages, " ")
+	quoted := make([]string, 0, len(req.ContainerImages))
+	for _, img := range req.ContainerImages {
+		// We assume the container images have been validated by the CLI (cli/main.go),
+		// which ensures they do not contain single quotes or other shell metacharacters.
+		quoted = append(quoted, "'"+img+"'")
+	}
+	images := strings.Join(quoted, " ")
 	flags := fmt.Sprintf("\n\nunpack %t %s %s", req.StoreSnapshotCheckSum, req.ImagePullAuth, images)
 	if _, err = concreteStartupScript.Write([]byte(flags)); err != nil {
 		return nil, fmt.Errorf("umable to create concrete startup script: %v", err)
